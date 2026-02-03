@@ -2,88 +2,109 @@ class TransportMap {
     constructor() {
         this.map = null;
         this.vehicleMarkers = {};
-        this.stopMarkers = {};
-        this.activeLines = new Set();
         this.currentTheme = document.documentElement.getAttribute('data-theme');
+        this.tileLayer = null;
         
         this.initMap();
         this.initControls();
+        this.setupThemeListener();
     }
     
     initMap() {
-        // Centrum na Kraków
+        console.log('Inicjalizacja mapy...');
+        
+        // Sprawdź czy element mapy istnieje
+        const mapElement = document.getElementById('map');
+        if (!mapElement) {
+            console.error('Element #map nie znaleziony!');
+            return;
+        }
+        
+        // Inicjalizuj mapę
         this.map = L.map('map').setView([50.0647, 19.9450], 13);
         
-        // Warstwy mapy dla różnych motywów
-        this.layers = {
-            light: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }),
-            dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, © CartoDB'
-            })
-        };
-        
-        // Ustaw początkową warstwę
+        // Dodaj początkową warstwę
         this.updateMapTheme();
         
-        // Obserwuj zmiany motywu
-        const observer = new MutationObserver(() => {
-            const newTheme = document.documentElement.getAttribute('data-theme');
-            if (newTheme !== this.currentTheme) {
-                this.currentTheme = newTheme;
-                this.updateMapTheme();
-            }
-        });
-        
-        observer.observe(document.documentElement, { attributes: true });
+        console.log('Mapa zainicjalizowana');
     }
     
-    class TransportMap {
-    // ... istniejący kod ...
-    
-    updateMapTheme() {
-        // Usuń wszystkie kafelki
-        this.map.eachLayer(layer => {
-            if (layer instanceof L.TileLayer) {
-                this.map.removeLayer(layer);
-            }
+    setupThemeListener() {
+        // Obserwuj zmiany motywu
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'data-theme') {
+                    const newTheme = document.documentElement.getAttribute('data-theme');
+                    if (newTheme !== this.currentTheme) {
+                        this.currentTheme = newTheme;
+                        this.updateMapTheme();
+                    }
+                }
+            });
         });
         
-        // Wybierz odpowiednie kafelki dla motywu
-        let tileLayer;
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme']
+        });
+    }
+    
+    updateMapTheme() {
+        if (!this.map) return;
         
+        // Usuń starą warstwę
+        if (this.tileLayer) {
+            this.map.removeLayer(this.tileLayer);
+        }
+        
+        // Wybierz odpowiednie kafelki dla motywu
         if (this.currentTheme === 'dark') {
-            // Tryb ciemny - ciemne kafelki
-            tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            // Tryb ciemny
+            this.tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap, © CartoDB',
                 maxZoom: 19,
                 subdomains: 'abcd'
             });
         } else {
-            // Tryb jasny - standardowe kafelki
-            tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            // Tryb jasny
+            this.tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
             });
         }
         
-        // Dodaj nowe kafelki
-        tileLayer.addTo(this.map);
+        // Dodaj nową warstwę
+        this.tileLayer.addTo(this.map);
+        
+        console.log('Mapa zaktualizowana - motyw:', this.currentTheme);
     }
     
     initControls() {
-        // Przyciski zoom
-        document.getElementById('zoom-in').addEventListener('click', () => this.map.zoomIn());
-        document.getElementById('zoom-out').addEventListener('click', () => this.map.zoomOut());
-        
-        // Lokalizacja użytkownika
-        document.getElementById('locate-btn').addEventListener('click', () => this.locateUser());
+        setTimeout(() => {
+            const locateBtn = document.getElementById('locate-btn');
+            const zoomIn = document.getElementById('zoom-in');
+            const zoomOut = document.getElementById('zoom-out');
+            
+            if (locateBtn) {
+                locateBtn.addEventListener('click', () => this.locateUser());
+                locateBtn.style.display = 'block';
+            }
+            
+            if (zoomIn) {
+                zoomIn.addEventListener('click', () => this.map && this.map.zoomIn());
+                zoomIn.style.display = 'block';
+            }
+            
+            if (zoomOut) {
+                zoomOut.addEventListener('click', () => this.map && this.map.zoomOut());
+                zoomOut.style.display = 'block';
+            }
+        }, 500);
     }
     
     locateUser() {
-        if (!navigator.geolocation) {
-            alert('Geolokalizacja nie jest wspierana przez twoją przeglądarkę');
+        if (!navigator.geolocation || !this.map) {
+            alert('Geolokalizacja nie jest dostępna');
             return;
         }
         
@@ -100,16 +121,36 @@ class TransportMap {
     }
     
     addVehicleMarker(vehicle) {
-        const { id, lat, lon, line, type, heading } = vehicle;
+        if (!this.map) return;
         
-        // Określ kolor i ikonę
+        const { id, lat, lon, line, type } = vehicle;
+        
+        // Określ typ i kolor
         const isBus = type === 'bus' || parseInt(line) > 100;
         const color = isBus ? '#2ecc71' : '#e74c3c';
-        const icon = L.AwesomeMarkers.icon({
-            icon: isBus ? 'bus' : 'train',
-            markerColor: color,
-            prefix: 'fa',
-            iconColor: 'white'
+        const iconText = isBus ? '🚌' : '🚋';
+        
+        // Utwórz ikonę
+        const icon = L.divIcon({
+            html: `<div style="
+                background-color: ${color};
+                color: white;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                font-weight: bold;
+                border: 3px solid white;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                cursor: pointer;
+                transition: transform 0.2s;
+            ">${line}</div>`,
+            className: 'vehicle-marker',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
         });
         
         // Usuń istniejący marker
@@ -120,24 +161,25 @@ class TransportMap {
         // Utwórz nowy marker
         const marker = L.marker([lat, lon], { 
             icon: icon,
-            rotationAngle: heading || 0
+            title: `Linia ${line}`
         });
         
-        // Dodaj popup z informacjami
+        // Dodaj popup
         marker.bindPopup(`
-            <div class="vehicle-popup">
-                <h4>Linia ${line}</h4>
-                <p>Typ: ${isBus ? 'Autobus' : 'Tramwaj'}</p>
-                <p>ID: ${id}</p>
-                <small>Ostatnia aktualizacja: ${new Date().toLocaleTimeString()}</small>
+            <div style="padding: 10px; min-width: 200px;">
+                <h4 style="margin: 0 0 8px 0; color: ${color}">Linia ${line}</h4>
+                <p style="margin: 0 0 5px 0;"><strong>Typ:</strong> ${isBus ? 'Autobus' : 'Tramwaj'}</p>
+                <p style="margin: 0 0 5px 0;"><strong>ID:</strong> ${id}</p>
+                <p style="margin: 0 0 8px 0;"><strong>Pozycja:</strong><br>${lat.toFixed(5)}, ${lon.toFixed(5)}</p>
+                <small style="color: #888;">Kliknij na mapie aby zamknąć</small>
             </div>
         `);
         
+        // Dodaj do mapy
         marker.addTo(this.map);
         this.vehicleMarkers[id] = marker;
         
-        // Dodaj linię do aktywnych
-        this.activeLines.add(line);
+        return marker;
     }
     
     removeOldVehicles(activeIds) {
@@ -149,31 +191,52 @@ class TransportMap {
         });
     }
     
-    updateLinesList() {
+    clearAll() {
+        if (!this.map) return;
+        
+        Object.values(this.vehicleMarkers).forEach(marker => {
+            this.map.removeLayer(marker);
+        });
+        this.vehicleMarkers = {};
+    }
+    
+    updateLinesList(lines) {
         const linesList = document.getElementById('lines-list');
+        if (!linesList) return;
+        
         linesList.innerHTML = '';
         
-        Array.from(this.activeLines).sort().forEach(line => {
+        // Ogranicz do 20 najczęstszych linii
+        const uniqueLines = [...new Set(lines)].sort((a, b) => {
+            const aNum = parseInt(a);
+            const bNum = parseInt(b);
+            if (isNaN(aNum) || isNaN(bNum)) return a.localeCompare(b);
+            return aNum - bNum;
+        }).slice(0, 20);
+        
+        uniqueLines.forEach(line => {
             const isBus = parseInt(line) > 100;
             const badge = document.createElement('span');
             badge.className = `line-badge ${isBus ? 'bus' : 'tram'}`;
             badge.textContent = line;
-            badge.title = `Kliknij, aby pokazać/ukryć linię ${line}`;
-            badge.addEventListener('click', () => this.toggleLine(line));
+            badge.title = `Linia ${line}`;
+            
+            // Kliknięcie zaznacza/odznacza pojazdy tej linii
+            badge.addEventListener('click', () => {
+                this.highlightLine(line);
+            });
+            
             linesList.appendChild(badge);
         });
     }
     
-    toggleLine(line) {
-        // Logika pokazywania/ukrywania konkretnej linii
-        console.log(`Toggle line: ${line}`);
-    }
-    
-    clearAll() {
-        Object.values(this.vehicleMarkers).forEach(marker => this.map.removeLayer(marker));
-        Object.values(this.stopMarkers).forEach(marker => this.map.removeLayer(marker));
-        this.vehicleMarkers = {};
-        this.stopMarkers = {};
-        this.activeLines.clear();
+    highlightLine(line) {
+        // Podświetl pojazdy danej linii
+        Object.values(this.vehicleMarkers).forEach(marker => {
+            const markerLine = marker.options.title?.replace('Linia ', '');
+            if (markerLine === line) {
+                marker.openPopup();
+            }
+        });
     }
 }
