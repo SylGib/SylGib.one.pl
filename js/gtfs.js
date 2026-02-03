@@ -1,161 +1,103 @@
 class GTFSClient {
     constructor() {
-        this.baseUrl = 'https://gtfs.ztp.krakow.pl';
-        this.updateInterval = 30000;
+        this.updateInterval = 15000; // 15 sekund
         this.updateTimer = null;
-        
-        console.log('GTFSClient zainicjalizowany');
+        console.log('📡 GTFSClient - tylko mock dane');
     }
     
     async fetchVehiclePositions() {
-        try {
-            console.log('Pobieranie danych z GTFS...');
-            
-            // RÓŻNE proxy do wypróbowania
-            const proxies = [
-                'https://api.allorigins.win/raw?url=',
-                'https://corsproxy.io/?',
-                'https://thingproxy.freeboard.io/fetch/',
-                'https://api.codetabs.com/v1/proxy?quest='
-            ];
-            
-            let response = null;
-            
-            // Spróbuj każde proxy
-            for (const proxy of proxies) {
-                try {
-                    const proxyUrl = proxy + encodeURIComponent(this.baseUrl + '/VehiclePositions.pb');
-                    console.log('Próbuję proxy:', proxy);
-                    
-                    response = await fetch(proxyUrl, {
-                        headers: {
-                            'Accept': 'application/x-protobuf'
-                        },
-                        signal: AbortSignal.timeout(5000) // Timeout 5s
-                    });
-                    
-                    if (response.ok) {
-                        console.log('Proxy działa:', proxy);
-                        break;
-                    }
-                } catch (proxyError) {
-                    console.log('Proxy nie działa:', proxy, proxyError.message);
-                    continue;
-                }
-            }
-            
-            if (!response || !response.ok) {
-                console.warn('Wszystkie proxy zawiodły, używam mock danych');
-                return this.getMockData();
-            }
-            
-            // Dla testów zwróć mock dane (bo i tak nie mamy parsera Protobuf)
-            return this.getMockData();
-            
-        } catch (error) {
-            console.warn('Błąd pobierania GTFS, używam mock danych:', error.message);
-            return this.getMockData();
-        }
+        console.log('🎲 Generowanie danych testowych...');
+        return this.getMockData(); // Zawsze mock
     }
     
     getMockData() {
-        // REALISTYCZNE dane testowe dla Krakowa
-        const mockVehicles = [];
+        const vehicles = [];
+        const now = Date.now();
         
-        // Przydatne trasy w Krakowie
+        // Stałe trasy dla realizmu
         const routes = [
-            // Tramwaje
-            { line: '1', type: 'tram', route: [[50.057, 19.945], [50.065, 19.940], [50.072, 19.935]] },
-            { line: '3', type: 'tram', route: [[50.060, 19.935], [50.065, 19.945], [50.070, 19.955]] },
-            { line: '4', type: 'tram', route: [[50.055, 19.925], [50.060, 19.935], [50.065, 19.945]] },
-            { line: '6', type: 'tram', route: [[50.050, 19.950], [50.055, 19.945], [50.060, 19.940]] },
-            { line: '14', type: 'tram', route: [[50.068, 19.938], [50.062, 19.932], [50.058, 19.925]] },
-            { line: '18', type: 'tram', route: [[50.052, 19.930], [50.058, 19.935], [50.063, 19.940]] },
-            { line: '52', type: 'tram', route: [[50.070, 19.950], [50.065, 19.945], [50.060, 19.940]] },
+            // Tramwaje - centrum
+            {line: '1', type: 'tram', lat: 50.061, lon: 19.945, route: 0},
+            {line: '3', type: 'tram', lat: 50.064, lon: 19.938, route: 0.2},
+            {line: '4', type: 'tram', lat: 50.067, lon: 19.932, route: 0.4},
+            {line: '6', type: 'tram', lat: 50.058, lon: 19.925, route: 0.6},
+            {line: '14', type: 'tram', lat: 50.062, lon: 19.918, route: 0.8},
+            {line: '18', type: 'tram', lat: 50.055, lon: 19.935, route: 0.3},
+            {line: '52', type: 'tram', lat: 50.069, lon: 19.950, route: 0.7},
             
-            // Autobusy
-            { line: '102', type: 'bus', route: [[50.068, 19.975], [50.063, 19.970], [50.058, 19.965]] },
-            { line: '124', type: 'bus', route: [[50.055, 19.910], [50.060, 19.915], [50.065, 19.920]] },
-            { line: '129', type: 'bus', route: [[50.072, 19.930], [50.067, 19.925], [50.062, 19.920]] },
-            { line: '152', type: 'bus', route: [[50.048, 19.935], [50.053, 19.940], [50.058, 19.945]] },
-            { line: '179', type: 'bus', route: [[50.065, 19.900], [50.070, 19.905], [50.075, 19.910]] },
-            { line: '194', type: 'bus', route: [[50.060, 19.960], [50.065, 19.965], [50.070, 19.970]] },
-            { line: '208', type: 'bus', route: [[50.045, 19.920], [50.050, 19.925], [50.055, 19.930]] },
-            { line: '224', type: 'bus', route: [[50.075, 19.945], [50.070, 19.940], [50.065, 19.935]] }
+            // Autobusy - różne dzielnice
+            {line: '102', type: 'bus', lat: 50.075, lon: 19.960, route: 0.1},
+            {line: '124', type: 'bus', lat: 50.050, lon: 19.910, route: 0.5},
+            {line: '129', type: 'bus', lat: 50.045, lon: 19.940, route: 0.9},
+            {line: '152', type: 'bus', lat: 50.070, lon: 19.900, route: 0.2},
+            {line: '179', type: 'bus', lat: 50.055, lon: 19.970, route: 0.6},
+            {line: '194', type: 'bus', lat: 50.040, lon: 19.920, route: 0.4},
+            {line: '208', type: 'bus', lat: 50.080, lon: 19.930, route: 0.8},
+            {line: '224', type: 'bus', lat: 50.065, lon: 19.980, route: 0.3},
+            
+            // Więcej pojazdów
+            {line: '1', type: 'tram', lat: 50.059, lon: 19.955, route: 0.5},
+            {line: '3', type: 'tram', lat: 50.066, lon: 19.965, route: 0.7},
+            {line: '102', type: 'bus', lat: 50.072, lon: 19.915, route: 0.9},
+            {line: '124', type: 'bus', lat: 50.048, lon: 19.955, route: 0.1},
+            {line: '52', type: 'tram', lat: 50.063, lon: 19.905, route: 0.3},
+            {line: '179', type: 'bus', lat: 50.057, lon: 19.890, route: 0.5},
+            {line: '14', type: 'tram', lat: 50.073, lon: 19.975, route: 0.7},
+            {line: '208', type: 'bus', lat: 50.052, lon: 19.935, route: 0.9}
         ];
         
-        // Stwórz pojazdy na trasach
-        routes.forEach((route, routeIndex) => {
-            // 2-3 pojazdy na trasę
-            const vehiclesOnRoute = 2 + Math.floor(Math.random() * 2);
+        routes.forEach((route, i) => {
+            // Delikatny ruch
+            const timeOffset = (now / 60000) * 0.1; // Powolny ruch
+            const progress = (route.route + timeOffset) % 1;
             
-            for (let i = 0; i < vehiclesOnRoute; i++) {
-                // Pozycja na trasie z progresem
-                const progress = (Date.now() / 60000 + i * 0.3) % 1; // Płynny ruch
-                const pointIndex = Math.floor(progress * (route.route.length - 1));
-                const nextPointIndex = (pointIndex + 1) % route.route.length;
-                
-                const [startLat, startLon] = route.route[pointIndex];
-                const [endLat, endLon] = route.route[nextPointIndex];
-                
-                const segmentProgress = (progress * (route.route.length - 1)) % 1;
-                
-                const lat = startLat + (endLat - startLat) * segmentProgress;
-                const lon = startLon + (endLon - startLon) * segmentProgress;
-                
-                // Kierunek (w stopniach)
-                const angle = Math.atan2(endLon - startLon, endLat - startLat) * (180 / Math.PI);
-                const heading = (angle + 360) % 360;
-                
-                mockVehicles.push({
-                    id: `${route.type}_${route.line}_${routeIndex}_${i}`,
-                    lat: lat,
-                    lon: lon,
-                    line: route.line,
-                    type: route.type,
-                    heading: heading,
-                    speed: route.type === 'bus' ? 30 + Math.random() * 20 : 20 + Math.random() * 15,
-                    timestamp: Date.now() / 1000
-                });
-            }
+            // Lekkie przesunięcie dla "ruchu"
+            const lat = route.lat + Math.sin(progress * Math.PI * 2) * 0.002;
+            const lon = route.lon + Math.cos(progress * Math.PI * 2) * 0.002;
+            
+            vehicles.push({
+                id: `vehicle_${i}_${Math.floor(now/1000)}`,
+                lat: lat,
+                lon: lon,
+                line: route.line,
+                type: route.type,
+                heading: (progress * 360) % 360,
+                speed: route.type === 'bus' ? 35 : 25,
+                timestamp: now / 1000
+            });
         });
         
-        console.log(`Wygenerowano ${mockVehicles.length} realistycznych pojazdów testowych`);
-        return mockVehicles;
+        console.log(`🎯 Wygenerowano ${vehicles.length} pojazdów`);
+        return vehicles;
     }
     
     startAutoUpdate(callback) {
-        // Natychmiastowe pierwsze pobranie
+        // Pierwsze natychmiastowe
         this.updateData(callback);
         
-        // Ustaw interwał
+        // Co 15 sekund
         this.updateTimer = setInterval(() => {
             this.updateData(callback);
         }, this.updateInterval);
         
-        console.log('Auto-odświeżanie uruchomione (co ' + this.updateInterval/1000 + 's)');
+        console.log(`⏱️ Auto-odświeżanie co ${this.updateInterval/1000}s`);
     }
     
     stopAutoUpdate() {
         if (this.updateTimer) {
             clearInterval(this.updateTimer);
             this.updateTimer = null;
-            console.log('Auto-odświeżanie zatrzymane');
         }
     }
     
     async updateData(callback) {
         try {
             const vehicles = await this.fetchVehiclePositions();
-            
-            if (callback && Array.isArray(vehicles)) {
+            if (callback && vehicles) {
                 callback(vehicles);
             }
-            
-            return vehicles;
         } catch (error) {
-            console.error('Błąd aktualizacji danych:', error);
-            return [];
+            console.error('Update error:', error);
         }
     }
 }
