@@ -7,25 +7,24 @@ class TransportApp {
         
         console.log('TransportApp - konstruktor');
         
-        // Poczekaj na załadowanie DOM
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
-        } else {
-            setTimeout(() => this.init(), 100);
-        }
+        // Inicjalizacja z opóźnieniem
+        setTimeout(() => this.init(), 100);
     }
     
     async init() {
         console.log('TransportApp - inicjalizacja');
         
         try {
-            // 1. Inicjalizuj komponenty
-            this.initComponents();
+            // 1. Inicjalizuj mapę
+            this.map = new TransportMap();
             
-            // 2. Ustaw event listenery
+            // 2. Inicjalizuj GTFS client
+            this.gtfs = new GTFSClient();
+            
+            // 3. Ustaw event listenery (BEZPIECZNIE)
             this.setupEventListeners();
             
-            // 3. Rozpocznij aplikację
+            // 4. Rozpocznij aplikację
             this.start();
             
             console.log('TransportApp - zainicjalizowany pomyślnie');
@@ -35,47 +34,38 @@ class TransportApp {
         }
     }
     
-    initComponents() {
-        // Inicjalizuj mapę (jeśli jeszcze nie zainicjalizowana przez theme.js)
-        if (!this.map) {
-            this.map = new TransportMap();
-        }
-        
-        // Inicjalizuj GTFS client
-        this.gtfs = new GTFSClient();
-    }
-    
     setupEventListeners() {
-        // Przycisk odśwież
+        // Przycisk odśwież - BEZPIECZNE SPRAWDZENIE
         const refreshBtn = document.getElementById('refresh-btn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.refreshData());
+            console.log('Przycisk odśwież podpięty');
+        } else {
+            console.warn('Przycisk #refresh-btn nie znaleziony');
         }
         
-        // Filtry
+        // Filtry - BEZPIECZNE SPRAWDZENIE
         const showBuses = document.getElementById('show-buses');
         const showTrams = document.getElementById('show-trams');
         
-        if (showBuses) {
+        if (showBuses && showTrams) {
             showBuses.addEventListener('change', () => this.applyFilters());
-        }
-        if (showTrams) {
             showTrams.addEventListener('change', () => this.applyFilters());
+            console.log('Filtry podpięte');
+        } else {
+            console.warn('Elementy filtrów nie znalezione');
         }
-        
-        // Obserwuj zmiany motywu
-        document.addEventListener('themeChanged', (e) => {
-            console.log('Motyw zmieniony:', e.detail.theme);
-        });
     }
     
     start() {
         console.log('Rozpoczynanie śledzenia pojazdów...');
         
         // Rozpocznij auto-odświeżanie
-        this.gtfs.startAutoUpdate((vehicles) => {
-            this.handleNewData(vehicles);
-        });
+        if (this.gtfs) {
+            this.gtfs.startAutoUpdate((vehicles) => {
+                this.handleNewData(vehicles);
+            });
+        }
         
         // Pierwsze manualne odświeżenie
         setTimeout(() => this.refreshData(), 1000);
@@ -83,6 +73,11 @@ class TransportApp {
     
     async refreshData() {
         console.log('Ręczne odświeżanie danych...');
+        
+        if (!this.gtfs) {
+            console.error('GTFS client nie zainicjalizowany');
+            return;
+        }
         
         try {
             const vehicles = await this.gtfs.fetchVehiclePositions();
@@ -108,9 +103,6 @@ class TransportApp {
         // Aktualizuj mapę
         this.updateMap(vehicles);
         
-        // Aktualizuj listę linii
-        this.updateLinesList(vehicles);
-        
         // Zaktualizuj czas
         this.updateTime();
     }
@@ -120,19 +112,20 @@ class TransportApp {
         const tramCount = vehicles.filter(v => v.type === 'tram').length;
         const totalCount = vehicles.length;
         
-        // Aktualizuj elementy jeśli istnieją
-        const updateElement = (id, value) => {
+        // BEZPIECZNA aktualizacja elementów
+        const elements = {
+            'bus-count': busCount,
+            'tram-count': tramCount,
+            'vehicles-online': totalCount,
+            'last-update': new Date().toLocaleTimeString('pl-PL')
+        };
+        
+        for (const [id, value] of Object.entries(elements)) {
             const element = document.getElementById(id);
             if (element) {
                 element.textContent = value;
-                element.style.opacity = '1';
             }
-        };
-        
-        updateElement('bus-count', busCount);
-        updateElement('tram-count', tramCount);
-        updateElement('vehicles-online', totalCount);
-        updateElement('last-update', new Date().toLocaleTimeString('pl-PL'));
+        }
         
         console.log(`Statystyki: ${busCount} autobusów, ${tramCount} tramwajów, ${totalCount} razem`);
     }
@@ -143,9 +136,9 @@ class TransportApp {
             return;
         }
         
-        // Pobierz ustawienia filtrów
-        const showBuses = document.getElementById('show-buses')?.checked ?? true;
-        const showTrams = document.getElementById('show-trams')?.checked ?? true;
+        // BEZPIECZNE pobranie ustawień filtrów
+        const showBuses = this.getFilterState('show-buses', true);
+        const showTrams = this.getFilterState('show-trams', true);
         
         // Filtruj pojazdy
         const filteredVehicles = vehicles.filter(vehicle => {
@@ -154,16 +147,11 @@ class TransportApp {
             return true;
         });
         
-        console.log(`Wyświetlam ${filteredVehicles.length} pojazdów (filtry: bus=${showBuses}, tram=${showTrams})`);
+        console.log(`Wyświetlam ${filteredVehicles.length} pojazdów`);
         
         // Dodaj/aktualizuj markery
         filteredVehicles.forEach(vehicle => {
             this.map.addVehicleMarker(vehicle);
-            
-            // Dodaj linię do aktywnych
-            if (vehicle.line) {
-                this.activeLines.add(vehicle.line);
-            }
         });
         
         // Usuń stare markery
@@ -171,12 +159,12 @@ class TransportApp {
         this.map.removeOldVehicles(activeIds);
     }
     
-    updateLinesList(vehicles) {
-        if (!this.map) return;
-        
-        // Zbierz wszystkie linie
-        const lines = vehicles.map(v => v.line).filter(line => line);
-        this.map.updateLinesList(lines);
+    getFilterState(elementId, defaultValue) {
+        const element = document.getElementById(elementId);
+        if (element && element.type === 'checkbox') {
+            return element.checked;
+        }
+        return defaultValue;
     }
     
     applyFilters() {
@@ -190,8 +178,7 @@ class TransportApp {
             const now = new Date();
             timeElement.textContent = now.toLocaleTimeString('pl-PL', { 
                 hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
+                minute: '2-digit'
             });
         }
     }
@@ -209,21 +196,8 @@ class TransportApp {
     }
 }
 
-// Uruchom aplikację
-let app = null;
-
-function initApp() {
-    if (!app) {
-        app = new TransportApp();
-        window.transportApp = app; // Dostęp globalny dla debugowania
-        console.log('Aplikacja uruchomiona');
-    }
-}
-
-// Poczekaj na załadowanie wszystkich skryptów
+// Uruchom aplikację po załadowaniu strony
 window.addEventListener('load', () => {
-    setTimeout(initApp, 500);
+    console.log('Strona załadowana - uruchamiam aplikację');
+    window.app = new TransportApp();
 });
-
-// Ręczna inicjalizacja jeśli potrzebna
-window.initTransportApp = initApp;
