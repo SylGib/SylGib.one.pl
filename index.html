@@ -1,75 +1,137 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <title>Mapa MPK Kraków – GTFS‑RT</title>
+  <meta charset="UTF-8" />
+  <title>TTSS Kraków – live</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet -->
   <link
     rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
+
   <style>
-    body, html { margin: 0; height: 100%; }
-    #map { height: 100%; }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
+
 <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- GTFS-Realtime decoder -->
 <script src="https://cdn.jsdelivr.net/npm/gtfs-realtime-bindings/dist/gtfs-realtime-bindings.min.js"></script>
+
 <script>
-  const map = L.map('map').setView([50.0647, 19.9450], 13);
+/* ================================
+   🔧 KONFIGURACJA
+================================ */
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
+// ⛔ ZMIEŃ NA SWÓJ WORKER
+const PROXY_URL = "https://gtfs-ttss.pages.dev";
 
-  // Obiekty do przechowywania markerów pojazdów
-  const busMarkers = {};
-  const tramMarkers = {};
+// GTFS-RT Kraków
+const BUS_URL  = "https://gtfs.ztp.krakow.pl/VehiclePositions_A.pb";
+const TRAM_URL = "https://gtfs.ztp.krakow.pl/VehiclePositions_T.pb";
 
-  async function loadGTFSRT(url, markers, color) {
-    try {
-      const res = await fetch(url);
-      const arrayBuffer = await res.arrayBuffer();
-      const feed = GtfsRealtimeBindings.FeedMessage.decode(new Uint8Array(arrayBuffer));
+// co ile ms odświeżać
+const REFRESH_MS = 15000;
 
-      feed.entity.forEach(entity => {
-        if (entity.vehicle && entity.vehicle.position) {
-          const id = entity.id;
-          const lat = entity.vehicle.position.latitude;
-          const lng = entity.vehicle.position.longitude;
-          const line = entity.vehicle.trip && entity.vehicle.trip.route_id ? entity.vehicle.trip.route_id : "Nieznana linia";
+/* ================================
+   🗺️ MAPA
+================================ */
 
-          // jeśli marker już istnieje – przesuń
-          if (markers[id]) {
-            markers[id].setLatLng([lat, lng]);
-          } else {
-            // nowy marker
-            markers[id] = L.circleMarker([lat, lng], {
-              radius: 6,
-              color: color,
-              fillColor: color,
-              fillOpacity: 0.8
-            }).addTo(map)
-              .bindPopup(`Linia: ${line}`);
-          }
-        }
-      });
+const map = L.map("map").setView([50.0647, 19.9450], 13);
 
-    } catch (err) {
-      console.error('Błąd pobierania GTFS‑RT:', err);
-    }
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap"
+}).addTo(map);
+
+/* ================================
+   🚍 MARKERY
+================================ */
+
+const buses = {};
+const trams = {};
+
+const busIcon = L.circleMarker([0,0], {
+  radius: 6,
+  color: "blue",
+  fillColor: "blue",
+  fillOpacity: 0.8
+});
+
+const tramIcon = L.circleMarker([0,0], {
+  radius: 6,
+  color: "red",
+  fillColor: "red",
+  fillOpacity: 0.8
+});
+
+/* ================================
+   📡 GTFS-RT
+================================ */
+
+async function loadVehicles(url, store, color) {
+  try {
+    const res = await fetch(
+      `${PROXY_URL}/?url=${encodeURIComponent(url)}`
+    );
+
+    const buffer = await res.arrayBuffer();
+    const feed = GtfsRealtimeBindings.FeedMessage.decode(
+      new Uint8Array(buffer)
+    );
+
+    feed.entity.forEach(e => {
+      if (!e.vehicle || !e.vehicle.position) return;
+
+      const id = e.id;
+      const lat = e.vehicle.position.latitude;
+      const lon = e.vehicle.position.longitude;
+      const line =
+        e.vehicle.trip && e.vehicle.trip.route_id
+          ? e.vehicle.trip.route_id
+          : "?";
+
+      if (store[id]) {
+        store[id].setLatLng([lat, lon]);
+      } else {
+        store[id] = L.circleMarker([lat, lon], {
+          radius: 6,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.9
+        })
+          .bindPopup(`Linia: ${line}`)
+          .addTo(map);
+      }
+    });
+
+  } catch (err) {
+    console.error("GTFS error:", err);
   }
+}
 
-  async function updateVehicles() {
-    await loadGTFSRT('https://gtfs.ztp.krakow.pl/VehiclePositions_A.pb', busMarkers, 'blue'); // autobusy
-    await loadGTFSRT('https://gtfs.ztp.krakow.pl/VehiclePositions_T.pb', tramMarkers, 'red');  // tramwaje
-  }
+async function update() {
+  loadVehicles(BUS_URL, buses, "blue");
+  loadVehicles(TRAM_URL, trams, "red");
+}
 
-  // aktualizacja co 15 sekund
-  updateVehicles();
-  setInterval(updateVehicles, 15000);
+update();
+setInterval(update, REFRESH_MS);
 </script>
+
 </body>
 </html>
