@@ -1,134 +1,99 @@
 class TransportMap {
     constructor() {
+        console.log('🗺️ Inicjalizacja mapy...');
         this.map = null;
         this.vehicleMarkers = {};
         this.currentTheme = document.documentElement.getAttribute('data-theme');
-        this.tileLayer = null;
         
-        console.log('TransportMap - konstruktor');
-        
-        // Inicjalizacja z opóźnieniem
-        setTimeout(() => this.initMap(), 100);
+        this.initMap();
     }
     
     initMap() {
-        console.log('Inicjalizacja mapy...');
-        
         // Sprawdź czy Leaflet jest dostępny
         if (typeof L === 'undefined') {
-            console.error('Leaflet (L) nie jest załadowany!');
+            console.error('Leaflet nie załadowany');
             setTimeout(() => this.initMap(), 100);
             return;
         }
         
-        // Sprawdź czy element mapy istnieje
+        // Sprawdź element mapy
         const mapElement = document.getElementById('map');
         if (!mapElement) {
-            console.error('Element #map nie znaleziony!');
+            console.error('Element #map nie znaleziony');
             return;
         }
         
         try {
-            // Inicjalizuj mapę
+            // Stwórz mapę
             this.map = L.map('map').setView([50.0647, 19.9450], 13);
             
-            // Dodaj początkową warstwę
+            // Dodaj warstwę
             this.updateMapTheme();
             
-            // Inicjalizuj kontrolki
-            this.initControls();
+            // Kontrolki
+            this.addMapControls();
             
-            // Ustaw obserwatora motywu
-            this.setupThemeListener();
-            
-            console.log('Mapa zainicjalizowana pomyślnie');
+            console.log('✅ Mapa gotowa');
         } catch (error) {
-            console.error('Błąd inicjalizacji mapy:', error);
+            console.error('Błąd tworzenia mapy:', error);
         }
-    }
-    
-    setupThemeListener() {
-        // Obserwuj zmiany motywu
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'data-theme') {
-                    const newTheme = document.documentElement.getAttribute('data-theme');
-                    if (newTheme !== this.currentTheme) {
-                        this.currentTheme = newTheme;
-                        this.updateMapTheme();
-                    }
-                }
-            });
-        });
-        
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['data-theme']
-        });
     }
     
     updateMapTheme() {
         if (!this.map) return;
         
-        console.log('Aktualizacja motywu mapy:', this.currentTheme);
-        
         // Usuń starą warstwę
-        if (this.tileLayer) {
-            this.map.removeLayer(this.tileLayer);
-        }
+        this.map.eachLayer(layer => {
+            if (layer instanceof L.TileLayer) {
+                this.map.removeLayer(layer);
+            }
+        });
         
-        // Wybierz odpowiednie kafelki dla motywu
+        // Dodaj nową w zależności od motywu
+        let tileUrl, attribution;
+        
         if (this.currentTheme === 'dark') {
-            // Tryb ciemny - ciemne kafelki
-            this.tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, © CartoDB',
-                maxZoom: 19,
-                subdomains: 'abcd'
-            });
+            tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+            attribution = '© OpenStreetMap, © CartoDB';
         } else {
-            // Tryb jasny - standardowe kafelki
-            this.tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-            });
+            tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            attribution = '© OpenStreetMap contributors';
         }
         
-        // Dodaj nową warstwę
-        this.tileLayer.addTo(this.map);
+        L.tileLayer(tileUrl, {
+            attribution: attribution,
+            maxZoom: 19
+        }).addTo(this.map);
     }
     
-    initControls() {
-        // Kontrolki mapy
-        const initControl = (id, action) => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                btn.addEventListener('click', action);
-                btn.style.display = 'block';
-            }
-        };
+    addMapControls() {
+        // Lokalizacja użytkownika
+        const locateBtn = document.getElementById('locate-btn');
+        if (locateBtn) {
+            locateBtn.onclick = () => this.locateUser();
+        }
         
-        initControl('locate-btn', () => this.locateUser());
-        initControl('zoom-in', () => this.map && this.map.zoomIn());
-        initControl('zoom-out', () => this.map && this.map.zoomOut());
+        // Zoom
+        const zoomIn = document.getElementById('zoom-in');
+        const zoomOut = document.getElementById('zoom-out');
         
-        console.log('Kontrolki mapy zainicjalizowane');
+        if (zoomIn) zoomIn.onclick = () => this.map && this.map.zoomIn();
+        if (zoomOut) zoomOut.onclick = () => this.map && this.map.zoomOut();
     }
     
     locateUser() {
-        if (!navigator.geolocation || !this.map) {
-            alert('Geolokalizacja nie jest dostępna');
+        if (!navigator.geolocation) {
+            alert('Twoja przeglądarka nie wspiera geolokalizacji');
             return;
         }
         
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
                 this.map.setView([latitude, longitude], 15);
-                console.log('Centrowanie na użytkowniku:', latitude, longitude);
             },
             (error) => {
                 console.error('Błąd geolokalizacji:', error);
-                alert('Nie udało się uzyskać lokalizacji. Sprawdź uprawnienia przeglądarki.');
             }
         );
     }
@@ -136,121 +101,51 @@ class TransportMap {
     addVehicleMarker(vehicle) {
         if (!this.map) return null;
         
-        const { id, lat, lon, line, type, heading } = vehicle;
-        
-        // Określ typ i kolor
-        const isBus = type === 'bus' || parseInt(line) > 100;
+        const { id, lat, lon, line, type } = vehicle;
+        const isBus = type === 'bus';
         const color = isBus ? '#2ecc71' : '#e74c3c';
-        const emoji = isBus ? '🚌' : '🚋';
         
-        // Utwórz ikonę z emoji
+        // Prosta ikona
         const icon = L.divIcon({
             html: `
                 <div style="
-                    position: relative;
-                    width: 40px;
-                    height: 40px;
+                    background: ${color};
+                    color: white;
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    transform: rotate(${heading || 0}deg);
+                    font-weight: bold;
+                    font-size: 14px;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
                 ">
-                    <div style="
-                        background-color: ${color};
-                        color: white;
-                        width: 36px;
-                        height: 36px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 16px;
-                        font-weight: bold;
-                        border: 3px solid white;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                        cursor: pointer;
-                    ">
-                        ${line}
-                    </div>
-                    <div style="
-                        position: absolute;
-                        top: -8px;
-                        left: -8px;
-                        font-size: 20px;
-                        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-                    ">
-                        ${emoji}
-                    </div>
+                    ${line}
                 </div>
             `,
             className: 'vehicle-marker',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
+            iconSize: [34, 34]
         });
         
-        // Usuń istniejący marker
+        // Usuń stary marker
         if (this.vehicleMarkers[id]) {
             this.map.removeLayer(this.vehicleMarkers[id]);
         }
         
-        // Utwórz nowy marker
-        const marker = L.marker([lat, lon], { 
-            icon: icon,
-            title: `Linia ${line} (${isBus ? 'Autobus' : 'Tramwaj'})`
-        });
+        // Nowy marker
+        const marker = L.marker([lat, lon], { icon: icon });
         
-        // Dodaj popup z informacjami
+        // Popup
         marker.bindPopup(`
-            <div style="padding: 12px; min-width: 220px;">
-                <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                    <div style="
-                        background-color: ${color};
-                        color: white;
-                        width: 30px;
-                        height: 30px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-weight: bold;
-                        margin-right: 10px;
-                    ">
-                        ${line}
-                    </div>
-                    <div>
-                        <h4 style="margin: 0 0 4px 0; color: ${color}">Linia ${line}</h4>
-                        <p style="margin: 0; font-size: 14px; color: #666;">
-                            ${isBus ? 'Autobus' : 'Tramwaj'} • ${emoji}
-                        </p>
-                    </div>
-                </div>
-                <hr style="margin: 8px 0; border: none; border-top: 1px solid #eee;">
-                <p style="margin: 6px 0; font-size: 13px;">
-                    <strong>Pozycja:</strong><br>
-                    ${lat.toFixed(5)}°, ${lon.toFixed(5)}°
-                </p>
-                <p style="margin: 6px 0; font-size: 13px;">
-                    <strong>Kierunek:</strong> ${heading ? heading.toFixed(0) + '°' : 'Nieznany'}
-                </p>
-                <p style="margin: 6px 0; font-size: 13px;">
-                    <strong>ID:</strong> ${id}
-                </p>
-                <small style="color: #888; font-size: 12px;">
-                    Ostatnia aktualizacja: ${new Date().toLocaleTimeString('pl-PL')}
-                </small>
+            <div style="padding: 10px;">
+                <strong>Linia ${line}</strong><br>
+                ${isBus ? 'Autobus' : 'Tramwaj'}<br>
+                <small>${lat.toFixed(5)}, ${lon.toFixed(5)}</small>
             </div>
         `);
         
-        // Dodaj hover effect
-        marker.on('mouseover', function() {
-            this.openPopup();
-        });
-        
-        marker.on('mouseout', function() {
-            this.closePopup();
-        });
-        
-        // Dodaj do mapy
         marker.addTo(this.map);
         this.vehicleMarkers[id] = marker;
         
@@ -264,16 +159,5 @@ class TransportMap {
                 delete this.vehicleMarkers[id];
             }
         });
-    }
-    
-    clearAll() {
-        if (!this.map) return;
-        
-        Object.values(this.vehicleMarkers).forEach(marker => {
-            this.map.removeLayer(marker);
-        });
-        this.vehicleMarkers = {};
-        
-        console.log('Wszystkie markery usunięte');
     }
 }
