@@ -28,11 +28,13 @@
 body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .header, .footer {
     background-color: var(--bg-secondary);
     border-color: var(--border-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .sidebar {
@@ -40,25 +42,32 @@ body {
     border-color: var(--border-color);
 }
 
-.info-box {
-    background-color: var(--card-bg);
-    box-shadow: var(--shadow);
+.btn-primary {
+    background-color: var(--accent-color);
 }
 
-.filter-select {
+.btn-primary:hover {
+    background-color: var(--accent-color);
+    opacity: 0.9;
+}
+
+/* Map controls */
+.map-btn {
+    background-color: var(--bg-secondary);
     color: var(--text-primary);
-    border-color: var(--border-color);
+    border: 1px solid var(--border-color);
 }
 
+.map-btn:hover {
+    background-color: var(--bg-tertiary);
+}
+
+/* Checkboxes */
+.checkbox-label {
+    color: var(--text-primary);
+}
+
+/* Footer links */
 .footer a {
     color: var(--accent-color);
-}
-
-/* Dostosowanie mapy */
-[data-theme="dark"] .leaflet-tile {
-    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
-}
-
-[data-theme="light"] .leaflet-tile {
-    filter: none;
 }
