@@ -5,13 +5,21 @@ class TransportMap {
         this.currentTheme = document.documentElement.getAttribute('data-theme');
         this.tileLayer = null;
         
-        this.initMap();
-        this.initControls();
-        this.setupThemeListener();
+        console.log('TransportMap - konstruktor');
+        
+        // Inicjalizacja z opóźnieniem
+        setTimeout(() => this.initMap(), 100);
     }
     
     initMap() {
         console.log('Inicjalizacja mapy...');
+        
+        // Sprawdź czy Leaflet jest dostępny
+        if (typeof L === 'undefined') {
+            console.error('Leaflet (L) nie jest załadowany!');
+            setTimeout(() => this.initMap(), 100);
+            return;
+        }
         
         // Sprawdź czy element mapy istnieje
         const mapElement = document.getElementById('map');
@@ -20,13 +28,23 @@ class TransportMap {
             return;
         }
         
-        // Inicjalizuj mapę
-        this.map = L.map('map').setView([50.0647, 19.9450], 13);
-        
-        // Dodaj początkową warstwę
-        this.updateMapTheme();
-        
-        console.log('Mapa zainicjalizowana');
+        try {
+            // Inicjalizuj mapę
+            this.map = L.map('map').setView([50.0647, 19.9450], 13);
+            
+            // Dodaj początkową warstwę
+            this.updateMapTheme();
+            
+            // Inicjalizuj kontrolki
+            this.initControls();
+            
+            // Ustaw obserwatora motywu
+            this.setupThemeListener();
+            
+            console.log('Mapa zainicjalizowana pomyślnie');
+        } catch (error) {
+            console.error('Błąd inicjalizacji mapy:', error);
+        }
     }
     
     setupThemeListener() {
@@ -52,6 +70,8 @@ class TransportMap {
     updateMapTheme() {
         if (!this.map) return;
         
+        console.log('Aktualizacja motywu mapy:', this.currentTheme);
+        
         // Usuń starą warstwę
         if (this.tileLayer) {
             this.map.removeLayer(this.tileLayer);
@@ -59,14 +79,14 @@ class TransportMap {
         
         // Wybierz odpowiednie kafelki dla motywu
         if (this.currentTheme === 'dark') {
-            // Tryb ciemny
+            // Tryb ciemny - ciemne kafelki
             this.tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap, © CartoDB',
                 maxZoom: 19,
                 subdomains: 'abcd'
             });
         } else {
-            // Tryb jasny
+            // Tryb jasny - standardowe kafelki
             this.tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
@@ -75,31 +95,23 @@ class TransportMap {
         
         // Dodaj nową warstwę
         this.tileLayer.addTo(this.map);
-        
-        console.log('Mapa zaktualizowana - motyw:', this.currentTheme);
     }
     
     initControls() {
-        setTimeout(() => {
-            const locateBtn = document.getElementById('locate-btn');
-            const zoomIn = document.getElementById('zoom-in');
-            const zoomOut = document.getElementById('zoom-out');
-            
-            if (locateBtn) {
-                locateBtn.addEventListener('click', () => this.locateUser());
-                locateBtn.style.display = 'block';
+        // Kontrolki mapy
+        const initControl = (id, action) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', action);
+                btn.style.display = 'block';
             }
-            
-            if (zoomIn) {
-                zoomIn.addEventListener('click', () => this.map && this.map.zoomIn());
-                zoomIn.style.display = 'block';
-            }
-            
-            if (zoomOut) {
-                zoomOut.addEventListener('click', () => this.map && this.map.zoomOut());
-                zoomOut.style.display = 'block';
-            }
-        }, 500);
+        };
+        
+        initControl('locate-btn', () => this.locateUser());
+        initControl('zoom-in', () => this.map && this.map.zoomIn());
+        initControl('zoom-out', () => this.map && this.map.zoomOut());
+        
+        console.log('Kontrolki mapy zainicjalizowane');
     }
     
     locateUser() {
@@ -112,45 +124,68 @@ class TransportMap {
             (position) => {
                 const { latitude, longitude } = position.coords;
                 this.map.setView([latitude, longitude], 15);
+                console.log('Centrowanie na użytkowniku:', latitude, longitude);
             },
             (error) => {
                 console.error('Błąd geolokalizacji:', error);
-                alert('Nie udało się uzyskać lokalizacji');
+                alert('Nie udało się uzyskać lokalizacji. Sprawdź uprawnienia przeglądarki.');
             }
         );
     }
     
     addVehicleMarker(vehicle) {
-        if (!this.map) return;
+        if (!this.map) return null;
         
-        const { id, lat, lon, line, type } = vehicle;
+        const { id, lat, lon, line, type, heading } = vehicle;
         
         // Określ typ i kolor
         const isBus = type === 'bus' || parseInt(line) > 100;
         const color = isBus ? '#2ecc71' : '#e74c3c';
-        const iconText = isBus ? '🚌' : '🚋';
+        const emoji = isBus ? '🚌' : '🚋';
         
-        // Utwórz ikonę
+        // Utwórz ikonę z emoji
         const icon = L.divIcon({
-            html: `<div style="
-                background-color: ${color};
-                color: white;
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 14px;
-                font-weight: bold;
-                border: 3px solid white;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                cursor: pointer;
-                transition: transform 0.2s;
-            ">${line}</div>`,
+            html: `
+                <div style="
+                    position: relative;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transform: rotate(${heading || 0}deg);
+                ">
+                    <div style="
+                        background-color: ${color};
+                        color: white;
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 16px;
+                        font-weight: bold;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                        cursor: pointer;
+                    ">
+                        ${line}
+                    </div>
+                    <div style="
+                        position: absolute;
+                        top: -8px;
+                        left: -8px;
+                        font-size: 20px;
+                        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+                    ">
+                        ${emoji}
+                    </div>
+                </div>
+            `,
             className: 'vehicle-marker',
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
         });
         
         // Usuń istniejący marker
@@ -161,19 +196,59 @@ class TransportMap {
         // Utwórz nowy marker
         const marker = L.marker([lat, lon], { 
             icon: icon,
-            title: `Linia ${line}`
+            title: `Linia ${line} (${isBus ? 'Autobus' : 'Tramwaj'})`
         });
         
-        // Dodaj popup
+        // Dodaj popup z informacjami
         marker.bindPopup(`
-            <div style="padding: 10px; min-width: 200px;">
-                <h4 style="margin: 0 0 8px 0; color: ${color}">Linia ${line}</h4>
-                <p style="margin: 0 0 5px 0;"><strong>Typ:</strong> ${isBus ? 'Autobus' : 'Tramwaj'}</p>
-                <p style="margin: 0 0 5px 0;"><strong>ID:</strong> ${id}</p>
-                <p style="margin: 0 0 8px 0;"><strong>Pozycja:</strong><br>${lat.toFixed(5)}, ${lon.toFixed(5)}</p>
-                <small style="color: #888;">Kliknij na mapie aby zamknąć</small>
+            <div style="padding: 12px; min-width: 220px;">
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <div style="
+                        background-color: ${color};
+                        color: white;
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        margin-right: 10px;
+                    ">
+                        ${line}
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 4px 0; color: ${color}">Linia ${line}</h4>
+                        <p style="margin: 0; font-size: 14px; color: #666;">
+                            ${isBus ? 'Autobus' : 'Tramwaj'} • ${emoji}
+                        </p>
+                    </div>
+                </div>
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid #eee;">
+                <p style="margin: 6px 0; font-size: 13px;">
+                    <strong>Pozycja:</strong><br>
+                    ${lat.toFixed(5)}°, ${lon.toFixed(5)}°
+                </p>
+                <p style="margin: 6px 0; font-size: 13px;">
+                    <strong>Kierunek:</strong> ${heading ? heading.toFixed(0) + '°' : 'Nieznany'}
+                </p>
+                <p style="margin: 6px 0; font-size: 13px;">
+                    <strong>ID:</strong> ${id}
+                </p>
+                <small style="color: #888; font-size: 12px;">
+                    Ostatnia aktualizacja: ${new Date().toLocaleTimeString('pl-PL')}
+                </small>
             </div>
         `);
+        
+        // Dodaj hover effect
+        marker.on('mouseover', function() {
+            this.openPopup();
+        });
+        
+        marker.on('mouseout', function() {
+            this.closePopup();
+        });
         
         // Dodaj do mapy
         marker.addTo(this.map);
@@ -198,45 +273,7 @@ class TransportMap {
             this.map.removeLayer(marker);
         });
         this.vehicleMarkers = {};
-    }
-    
-    updateLinesList(lines) {
-        const linesList = document.getElementById('lines-list');
-        if (!linesList) return;
         
-        linesList.innerHTML = '';
-        
-        // Ogranicz do 20 najczęstszych linii
-        const uniqueLines = [...new Set(lines)].sort((a, b) => {
-            const aNum = parseInt(a);
-            const bNum = parseInt(b);
-            if (isNaN(aNum) || isNaN(bNum)) return a.localeCompare(b);
-            return aNum - bNum;
-        }).slice(0, 20);
-        
-        uniqueLines.forEach(line => {
-            const isBus = parseInt(line) > 100;
-            const badge = document.createElement('span');
-            badge.className = `line-badge ${isBus ? 'bus' : 'tram'}`;
-            badge.textContent = line;
-            badge.title = `Linia ${line}`;
-            
-            // Kliknięcie zaznacza/odznacza pojazdy tej linii
-            badge.addEventListener('click', () => {
-                this.highlightLine(line);
-            });
-            
-            linesList.appendChild(badge);
-        });
-    }
-    
-    highlightLine(line) {
-        // Podświetl pojazdy danej linii
-        Object.values(this.vehicleMarkers).forEach(marker => {
-            const markerLine = marker.options.title?.replace('Linia ', '');
-            if (markerLine === line) {
-                marker.openPopup();
-            }
-        });
+        console.log('Wszystkie markery usunięte');
     }
 }
