@@ -1,203 +1,171 @@
 class TransportApp {
     constructor() {
+        console.log('🚀 TransportApp - start');
         this.map = null;
         this.gtfs = null;
         this.vehicles = [];
-        this.activeLines = new Set();
         
-        console.log('TransportApp - konstruktor');
-        
-        // Inicjalizacja z opóźnieniem
-        setTimeout(() => this.init(), 100);
+        // Poczekaj aż strona się załaduje
+        setTimeout(() => this.init(), 500);
     }
     
-    async init() {
-        console.log('TransportApp - inicjalizacja');
+    init() {
+        console.log('🔄 Inicjalizacja aplikacji...');
         
         try {
             // 1. Inicjalizuj mapę
             this.map = new TransportMap();
             
-            // 2. Inicjalizuj GTFS client
+            // 2. Inicjalizuj GTFS
             this.gtfs = new GTFSClient();
             
-            // 3. Ustaw event listenery (BEZPIECZNIE)
-            this.setupEventListeners();
+            // 3. Ustaw proste event listenery
+            this.setupBasicEvents();
             
-            // 4. Rozpocznij aplikację
+            // 4. Rozpocznij
             this.start();
             
-            console.log('TransportApp - zainicjalizowany pomyślnie');
+            console.log('✅ Aplikacja gotowa!');
             
         } catch (error) {
-            console.error('Błąd inicjalizacji TransportApp:', error);
+            console.error('❌ Błąd inicjalizacji:', error);
         }
     }
     
-    setupEventListeners() {
-        // Przycisk odśwież - BEZPIECZNE SPRAWDZENIE
+    setupBasicEvents() {
+        console.log('🔗 Konfiguracja eventów...');
+        
+        // Tylko przycisk odśwież - reszta opcjonalnie
         const refreshBtn = document.getElementById('refresh-btn');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.refreshData());
-            console.log('Przycisk odśwież podpięty');
-        } else {
-            console.warn('Przycisk #refresh-btn nie znaleziony');
+            refreshBtn.addEventListener('click', () => {
+                console.log('🔄 Kliknięto odśwież');
+                this.refreshData();
+            });
         }
         
-        // Filtry - BEZPIECZNE SPRAWDZENIE
-        const showBuses = document.getElementById('show-buses');
-        const showTrams = document.getElementById('show-trams');
+        // Filtry - tylko jeśli istnieją
+        const setupFilter = (id) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', () => this.applyFilters());
+                return true;
+            }
+            return false;
+        };
         
-        if (showBuses && showTrams) {
-            showBuses.addEventListener('change', () => this.applyFilters());
-            showTrams.addEventListener('change', () => this.applyFilters());
-            console.log('Filtry podpięte');
-        } else {
-            console.warn('Elementy filtrów nie znalezione');
-        }
+        const filters = ['show-buses', 'show-trams', 'show-stops'];
+        filters.forEach(filterId => {
+            if (setupFilter(filterId)) {
+                console.log(`✅ Filter ${filterId} podpięty`);
+            } else {
+                console.log(`⚠️ Filter ${filterId} nie znaleziony`);
+            }
+        });
     }
     
     start() {
-        console.log('Rozpoczynanie śledzenia pojazdów...');
+        console.log('▶️ Uruchamianie śledzenia...');
         
-        // Rozpocznij auto-odświeżanie
         if (this.gtfs) {
             this.gtfs.startAutoUpdate((vehicles) => {
                 this.handleNewData(vehicles);
             });
         }
-        
-        // Pierwsze manualne odświeżenie
-        setTimeout(() => this.refreshData(), 1000);
     }
     
     async refreshData() {
-        console.log('Ręczne odświeżanie danych...');
+        console.log('📡 Ręczne odświeżanie...');
         
-        if (!this.gtfs) {
-            console.error('GTFS client nie zainicjalizowany');
-            return;
-        }
+        if (!this.gtfs) return;
         
         try {
             const vehicles = await this.gtfs.fetchVehiclePositions();
             this.handleNewData(vehicles);
         } catch (error) {
-            console.error('Błąd ręcznego odświeżania:', error);
+            console.error('Błąd odświeżania:', error);
         }
     }
     
     handleNewData(vehicles) {
-        if (!Array.isArray(vehicles)) {
-            console.warn('Nieprawidłowe dane pojazdów:', vehicles);
+        if (!Array.isArray(vehicles) || vehicles.length === 0) {
+            console.warn('Brak danych pojazdów');
             return;
         }
         
-        console.log(`Otrzymano ${vehicles.length} pojazdów`);
-        
+        console.log(`📊 Otrzymano ${vehicles.length} pojazdów`);
         this.vehicles = vehicles;
         
-        // Aktualizuj statystyki
-        this.updateStats(vehicles);
-        
-        // Aktualizuj mapę
-        this.updateMap(vehicles);
-        
-        // Zaktualizuj czas
+        // Proste aktualizacje
+        this.updateSimpleStats(vehicles);
+        this.updateSimpleMap(vehicles);
         this.updateTime();
     }
     
-    updateStats(vehicles) {
+    updateSimpleStats(vehicles) {
         const busCount = vehicles.filter(v => v.type === 'bus').length;
         const tramCount = vehicles.filter(v => v.type === 'tram').length;
-        const totalCount = vehicles.length;
+        const total = vehicles.length;
         
-        // BEZPIECZNA aktualizacja elementów
-        const elements = {
-            'bus-count': busCount,
-            'tram-count': tramCount,
-            'vehicles-online': totalCount,
-            'last-update': new Date().toLocaleTimeString('pl-PL')
+        // Bezpieczna aktualizacja
+        const update = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
         };
         
-        for (const [id, value] of Object.entries(elements)) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-            }
-        }
-        
-        console.log(`Statystyki: ${busCount} autobusów, ${tramCount} tramwajów, ${totalCount} razem`);
+        update('bus-count', busCount);
+        update('tram-count', tramCount);
+        update('vehicles-online', total);
+        update('last-update', new Date().toLocaleTimeString('pl-PL'));
     }
     
-    updateMap(vehicles) {
-        if (!this.map) {
-            console.error('Mapa nie jest zainicjalizowana');
-            return;
-        }
+    updateSimpleMap(vehicles) {
+        if (!this.map) return;
         
-        // BEZPIECZNE pobranie ustawień filtrów
-        const showBuses = this.getFilterState('show-buses', true);
-        const showTrams = this.getFilterState('show-trams', true);
+        // Proste filtry
+        const showBuses = this.getChecked('show-buses', true);
+        const showTrams = this.getChecked('show-trams', true);
         
-        // Filtruj pojazdy
-        const filteredVehicles = vehicles.filter(vehicle => {
-            if (vehicle.type === 'bus' && !showBuses) return false;
-            if (vehicle.type === 'tram' && !showTrams) return false;
+        const filtered = vehicles.filter(v => {
+            if (v.type === 'bus' && !showBuses) return false;
+            if (v.type === 'tram' && !showTrams) return false;
             return true;
         });
         
-        console.log(`Wyświetlam ${filteredVehicles.length} pojazdów`);
+        // Dodaj markery
+        filtered.forEach(v => this.map.addVehicleMarker(v));
         
-        // Dodaj/aktualizuj markery
-        filteredVehicles.forEach(vehicle => {
-            this.map.addVehicleMarker(vehicle);
-        });
-        
-        // Usuń stare markery
-        const activeIds = filteredVehicles.map(v => v.id);
+        // Usuń stare
+        const activeIds = filtered.map(v => v.id);
         this.map.removeOldVehicles(activeIds);
     }
     
-    getFilterState(elementId, defaultValue) {
-        const element = document.getElementById(elementId);
-        if (element && element.type === 'checkbox') {
-            return element.checked;
-        }
-        return defaultValue;
+    getChecked(id, defaultValue) {
+        const el = document.getElementById(id);
+        return el && el.type === 'checkbox' ? el.checked : defaultValue;
     }
     
     applyFilters() {
-        console.log('Zastosowano filtry');
-        this.updateMap(this.vehicles);
+        console.log('🔧 Zastosowano filtry');
+        if (this.vehicles.length > 0) {
+            this.updateSimpleMap(this.vehicles);
+        }
     }
     
     updateTime() {
-        const timeElement = document.getElementById('update-time');
-        if (timeElement) {
+        const el = document.getElementById('update-time');
+        if (el) {
             const now = new Date();
-            timeElement.textContent = now.toLocaleTimeString('pl-PL', { 
-                hour: '2-digit', 
+            el.textContent = now.toLocaleTimeString('pl-PL', {
+                hour: '2-digit',
                 minute: '2-digit'
             });
         }
     }
-    
-    stop() {
-        if (this.gtfs) {
-            this.gtfs.stopAutoUpdate();
-        }
-        
-        if (this.map) {
-            this.map.clearAll();
-        }
-        
-        console.log('Aplikacja zatrzymana');
-    }
 }
 
-// Uruchom aplikację po załadowaniu strony
+// Uruchom po załadowaniu
 window.addEventListener('load', () => {
-    console.log('Strona załadowana - uruchamiam aplikację');
+    console.log('🌐 Strona załadowana');
     window.app = new TransportApp();
 });
