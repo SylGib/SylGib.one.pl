@@ -1,18 +1,21 @@
 class GTFSClient {
     constructor() {
         this.baseUrl = 'https://gtfs.ztp.krakow.pl';
-        this.vehiclePositions = null;
-        this.updateInterval = 30000;
+        this.updateInterval = 30000; // 30 sekund
         this.updateTimer = null;
         
         this.endpoints = {
             vehiclePositions: `${this.baseUrl}/VehiclePositions.pb`
         };
+        
+        console.log('GTFSClient zainicjalizowany');
     }
     
     async fetchVehiclePositions() {
         try {
-            // Użyj CORS proxy aby ominąć błąd CORS
+            console.log('Pobieranie danych z GTFS...');
+            
+            // Użyj CORS proxy
             const proxyUrl = 'https://corsproxy.io/?';
             const targetUrl = this.endpoints.vehiclePositions;
             
@@ -23,36 +26,15 @@ class GTFSClient {
             });
             
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error: ${response.status}`);
             }
             
-            const buffer = await response.arrayBuffer();
-            const vehicles = await this.parseProtobuf(buffer);
-            
-            return vehicles;
-        } catch (error) {
-            console.error('Błąd pobierania danych GTFS-RT:', error);
-            
-            // Dla testów - zwróć przykładowe dane
-            return this.getMockData();
-        }
-    }
-    
-    async parseProtobuf(buffer) {
-        try {
-            // Prosta implementacja bez zewnętrznych bibliotek
-            // Parsujemy ręcznie podstawowe dane
-            const dataView = new DataView(buffer);
-            const vehicles = [];
-            
-            // To jest uproszczony parser - w rzeczywistości potrzebujesz
-            // pełnej definicji protobuf GTFS-RT
-            
-            // Tymczasowo zwróć mock dane
+            // Dla testów zwróć mock dane
+            // W przyszłości można dodać prawdziwy parser Protobuf
             return this.getMockData();
             
         } catch (error) {
-            console.warn('Błąd parsowania protobuf, używam mock danych:', error);
+            console.warn('Błąd pobierania GTFS, używam mock danych:', error.message);
             return this.getMockData();
         }
     }
@@ -61,59 +43,74 @@ class GTFSClient {
         // Przykładowe dane dla testów
         const mockVehicles = [];
         const types = ['bus', 'tram'];
+        const busLines = ['102', '124', '129', '152', '179', '194', '208', '224'];
+        const tramLines = ['1', '3', '4', '6', '8', '10', '13', '14', '18', '20', '22', '24', '44', '50', '52'];
         
-        for (let i = 0; i < 20; i++) {
-            const isBus = Math.random() > 0.5;
+        // Losowe pozycje w obszarze Krakowa
+        const centerLat = 50.0647;
+        const centerLon = 19.9450;
+        const radius = 0.03; // ~3km
+        
+        for (let i = 0; i < 25; i++) {
+            const isBus = Math.random() > 0.4;
             const line = isBus ? 
-                Math.floor(Math.random() * 100) + 100 : 
-                Math.floor(Math.random() * 50) + 1;
+                busLines[Math.floor(Math.random() * busLines.length)] :
+                tramLines[Math.floor(Math.random() * tramLines.length)];
             
-            // Losowe pozycje w Krakowie
-            const lat = 50.06 + (Math.random() - 0.5) * 0.05;
-            const lon = 19.94 + (Math.random() - 0.5) * 0.05;
+            // Losowa pozycja w okręgu
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * radius;
+            const lat = centerLat + Math.cos(angle) * distance;
+            const lon = centerLon + Math.sin(angle) * distance;
             
             mockVehicles.push({
-                id: `vehicle_${i}`,
+                id: `vehicle_${i}_${Date.now()}`,
                 lat: lat,
                 lon: lon,
-                line: line.toString(),
+                line: line,
                 type: isBus ? 'bus' : 'tram',
                 heading: Math.floor(Math.random() * 360),
-                speed: Math.random() * 50,
+                speed: 20 + Math.random() * 40,
                 timestamp: Date.now() / 1000
             });
         }
         
+        console.log(`Wygenerowano ${mockVehicles.length} pojazdów testowych`);
         return mockVehicles;
     }
     
-    isBusLine(line) {
-        const lineNum = parseInt(line);
-        return !isNaN(lineNum) && lineNum > 99;
-    }
-    
     startAutoUpdate(callback) {
+        // Natychmiastowe pierwsze pobranie
         this.updateData(callback);
         
+        // Ustaw interwał
         this.updateTimer = setInterval(() => {
             this.updateData(callback);
         }, this.updateInterval);
+        
+        console.log('Auto-odświeżanie uruchomione');
     }
     
     stopAutoUpdate() {
         if (this.updateTimer) {
             clearInterval(this.updateTimer);
             this.updateTimer = null;
+            console.log('Auto-odświeżanie zatrzymane');
         }
     }
     
     async updateData(callback) {
-        const vehicles = await this.fetchVehiclePositions();
-        
-        if (callback && Array.isArray(vehicles)) {
-            callback(vehicles);
+        try {
+            const vehicles = await this.fetchVehiclePositions();
+            
+            if (callback && Array.isArray(vehicles)) {
+                callback(vehicles);
+            }
+            
+            return vehicles;
+        } catch (error) {
+            console.error('Błąd aktualizacji danych:', error);
+            return [];
         }
-        
-        return vehicles;
     }
 }
