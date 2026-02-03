@@ -14,6 +14,8 @@ class ThemeManager {
         
         // Nasłuchuj zmiany przełącznika
         this.themeToggle.addEventListener('change', () => this.toggleTheme());
+        
+        console.log('ThemeManager zainicjalizowany');
     }
     
     setTheme(theme) {
@@ -21,6 +23,8 @@ class ThemeManager {
         this.themeToggle.checked = theme === 'dark';
         this.themeLabel.textContent = theme === 'dark' ? 'Tryb ciemny' : 'Tryb jasny';
         localStorage.setItem('theme', theme);
+        
+        console.log('Motyw zmieniony na:', theme);
     }
     
     toggleTheme() {
@@ -29,7 +33,7 @@ class ThemeManager {
     }
 }
 
-// Inicjalizacja przy załadowaniu strony
+// Inicjalizacja
 document.addEventListener('DOMContentLoaded', () => {
     new ThemeManager();
 });
