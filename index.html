@@ -5,30 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kraków Transport Live</title>
     
-    <!-- Leaflet CSS -->
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Twoje style -->
+    <!-- Nasze style -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/themes.css">
-    
-    <style>
-        /* Tymczasowe style dla markerów */
-        .vehicle-marker {
-            background: none !important;
-            border: none !important;
-        }
-    </style>
 </head>
 <body>
     <div class="container">
         <!-- Nagłówek -->
         <header class="header">
             <div class="header-left">
-                <h1><i class="fas fa-subway"></i> Kraków Transport Live</h1>
+                <h1><i class="fas fa-bus"></i> Kraków Transport</h1>
                 <div class="theme-switch-wrapper">
                     <label class="theme-switch" for="theme-checkbox">
                         <input type="checkbox" id="theme-checkbox" checked>
@@ -37,7 +30,7 @@
                             <span class="moon">🌙</span>
                         </div>
                     </label>
-                    <span id="theme-label">Tryb ciemny</span>
+                    <span id="theme-label">Ciemny</span>
                 </div>
             </div>
             
@@ -57,11 +50,9 @@
                     </span>
                 </div>
                 
-                <div class="controls">
-                    <button id="refresh-btn" class="btn btn-primary">
-                        <i class="fas fa-sync-alt"></i> Odśwież
-                    </button>
-                </div>
+                <button id="refresh-btn" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> Odśwież
+                </button>
             </div>
         </header>
 
@@ -86,45 +77,38 @@
             <!-- Panel boczny -->
             <aside class="sidebar">
                 <div class="sidebar-section">
-                    <h3><i class="fas fa-info-circle"></i> Informacje</h3>
+                    <h3><i class="fas fa-info-circle"></i> Info</h3>
                     <div class="info-box">
-                        <p>Dane z: <strong>MPK Kraków</strong></p>
-                        <p>Ostatnia aktualizacja: <span id="last-update">-</span></p>
-                        <p>Pojazdy online: <span id="vehicles-online">0</span></p>
+                        <p>Pojazdy: <span id="vehicles-online">0</span></p>
+                        <p>Ostatnia aktualizacja: <br><span id="last-update">-</span></p>
                     </div>
                 </div>
                 
-                <!-- W panelu bocznym ZASTĄP całą sekcję "Filtry" tym kodem: -->
-<div class="sidebar-section">
-    <h3><i class="fas fa-filter"></i> Filtry</h3>
-    <div class="filters">
-        <label class="checkbox-label">
-            <input type="checkbox" id="show-buses" checked>
-            <span class="checkmark bus"></span>
-            Autobusy
-        </label>
-        <label class="checkbox-label">
-            <input type="checkbox" id="show-trams" checked>
-            <span class="checkmark tram"></span>
-            Tramwaje
-        </label>
-        <label class="checkbox-label">
-            <input type="checkbox" id="show-stops">
-            <span class="checkmark stop"></span>
-            Przystanki
-        </label>
-    </div>
-</div>
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-filter"></i> Filtry</h3>
+                    <div class="filters">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="show-buses" checked>
+                            <span class="checkmark bus"></span>
+                            Autobusy
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="show-trams" checked>
+                            <span class="checkmark tram"></span>
+                            Tramwaje
+                        </label>
+                    </div>
+                </div>
+            </aside>
+        </main>
         
         <!-- Stopka -->
         <footer class="footer">
-            <p>Dane: <a href="https://gtfs.ztp.krakow.pl/" target="_blank">MPK Kraków</a> • 
-               Mapa: © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a></p>
+            <p>Kraków Transport Live • Mock dane testowe</p>
         </footer>
     </div>
 
-    <!-- Skrypty -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Nasze skrypty -->
     <script src="js/theme.js"></script>
     <script src="js/map.js"></script>
     <script src="js/gtfs.js"></script>
