@@ -39,17 +39,37 @@ class TransportMap {
         observer.observe(document.documentElement, { attributes: true });
     }
     
+    class TransportMap {
+    // ... istniejący kod ...
+    
     updateMapTheme() {
-        // Usuń starą warstwę
+        // Usuń wszystkie kafelki
         this.map.eachLayer(layer => {
             if (layer instanceof L.TileLayer) {
                 this.map.removeLayer(layer);
             }
         });
         
-        // Dodaj nową warstwę
-        const layer = this.currentTheme === 'dark' ? this.layers.dark : this.layers.light;
-        layer.addTo(this.map);
+        // Wybierz odpowiednie kafelki dla motywu
+        let tileLayer;
+        
+        if (this.currentTheme === 'dark') {
+            // Tryb ciemny - ciemne kafelki
+            tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap, © CartoDB',
+                maxZoom: 19,
+                subdomains: 'abcd'
+            });
+        } else {
+            // Tryb jasny - standardowe kafelki
+            tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            });
+        }
+        
+        // Dodaj nowe kafelki
+        tileLayer.addTo(this.map);
     }
     
     initControls() {
