@@ -1,0 +1,64 @@
+/* Motyw jasny */
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e0e0e0;
+    --text-primary: #212121;
+    --text-secondary: #666666;
+    --border-color: #dddddd;
+    --accent-color: #2196F3;
+    --card-bg: #ffffff;
+    --shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Motyw ciemny */
+[data-theme="dark"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #404040;
+    --text-primary: #f5f5f5;
+    --text-secondary: #b0b0b0;
+    --border-color: #404040;
+    --accent-color: #4fc3f7;
+    --card-bg: #2d2d2d;
+    --shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Zastosowanie zmiennych */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.header, .footer {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.sidebar {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.info-box {
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow);
+}
+
+.filter-select {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.footer a {
+    color: var(--accent-color);
+}
+
+/* Dostosowanie mapy */
+[data-theme="dark"] .leaflet-tile {
+    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
+[data-theme="light"] .leaflet-tile {
+    filter: none;
+}
