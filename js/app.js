@@ -5,73 +5,78 @@ class TransportApp {
         this.gtfs = null;
         this.vehicles = [];
         
-        // Poczekaj aż strona się załaduje
-        setTimeout(() => this.init(), 500);
-    }
-    
-    init() {
-        console.log('🔄 Inicjalizacja aplikacji...');
-        
-        try {
-            // 1. Inicjalizuj mapę
-            this.map = new TransportMap();
-            
-            // 2. Inicjalizuj GTFS
-            this.gtfs = new GTFSClient();
-            
-            // 3. Ustaw proste event listenery
-            this.setupBasicEvents();
-            
-            // 4. Rozpocznij
-            this.start();
-            
-            console.log('✅ Aplikacja gotowa!');
-            
-        } catch (error) {
-            console.error('❌ Błąd inicjalizacji:', error);
+        // Start po załadowaniu strony
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.startApp());
+        } else {
+            this.startApp();
         }
     }
     
-    setupBasicEvents() {
-        console.log('🔗 Konfiguracja eventów...');
+    startApp() {
+        console.log('🔄 Start aplikacji...');
         
-        // Tylko przycisk odśwież - reszta opcjonalnie
+        // 1. Inicjalizuj mapę
+        try {
+            this.map = new TransportMap();
+            console.log('✅ Mapa zainicjalizowana');
+        } catch (error) {
+            console.error('❌ Błąd mapy:', error);
+            return;
+        }
+        
+        // 2. Inicjalizuj GTFS (tylko mock)
+        this.gtfs = new GTFSClient();
+        console.log('✅ GTFS zainicjalizowany');
+        
+        // 3. Podłącz eventy
+        this.connectEvents();
+        
+        // 4. Rozpocznij odświeżanie
+        this.startUpdates();
+        
+        console.log('✅ Aplikacja gotowa!');
+    }
+    
+    connectEvents() {
+        console.log('🔗 Podłączanie eventów...');
+        
+        // Przycisk odśwież
         const refreshBtn = document.getElementById('refresh-btn');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
+            refreshBtn.onclick = () => {
                 console.log('🔄 Kliknięto odśwież');
                 this.refreshData();
-            });
+            };
+            console.log('✅ Przycisk odśwież podpięty');
         }
         
-        // Filtry - tylko jeśli istnieją
-        const setupFilter = (id) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('change', () => this.applyFilters());
-                return true;
-            }
-            return false;
-        };
+        // Filtry
+        const busesCheck = document.getElementById('show-buses');
+        const tramsCheck = document.getElementById('show-trams');
         
-        const filters = ['show-buses', 'show-trams', 'show-stops'];
-        filters.forEach(filterId => {
-            if (setupFilter(filterId)) {
-                console.log(`✅ Filter ${filterId} podpięty`);
-            } else {
-                console.log(`⚠️ Filter ${filterId} nie znaleziony`);
-            }
-        });
+        if (busesCheck) {
+            busesCheck.onchange = () => this.applyFilters();
+            console.log('✅ Filter autobusów podpięty');
+        }
+        
+        if (tramsCheck) {
+            tramsCheck.onchange = () => this.applyFilters();
+            console.log('✅ Filter tramwajów podpięty');
+        }
     }
     
-    start() {
-        console.log('▶️ Uruchamianie śledzenia...');
+    startUpdates() {
+        console.log('⏱️ Uruchamianie odświeżania...');
         
-        if (this.gtfs) {
+        if (this.gtfs && this.gtfs.startAutoUpdate) {
             this.gtfs.startAutoUpdate((vehicles) => {
-                this.handleNewData(vehicles);
+                this.updateDisplay(vehicles);
             });
         }
+        
+        // Ręczne odświeżenie po 1s
+        setTimeout(() => this.refreshData(), 1000);
     }
     
     async refreshData() {
@@ -81,14 +86,14 @@ class TransportApp {
         
         try {
             const vehicles = await this.gtfs.fetchVehiclePositions();
-            this.handleNewData(vehicles);
+            this.updateDisplay(vehicles);
         } catch (error) {
             console.error('Błąd odświeżania:', error);
         }
     }
     
-    handleNewData(vehicles) {
-        if (!Array.isArray(vehicles) || vehicles.length === 0) {
+    updateDisplay(vehicles) {
+        if (!vehicles || !Array.isArray(vehicles)) {
             console.warn('Brak danych pojazdów');
             return;
         }
@@ -96,59 +101,68 @@ class TransportApp {
         console.log(`📊 Otrzymano ${vehicles.length} pojazdów`);
         this.vehicles = vehicles;
         
-        // Proste aktualizacje
-        this.updateSimpleStats(vehicles);
-        this.updateSimpleMap(vehicles);
+        // Statystyki
+        this.updateStats(vehicles);
+        
+        // Mapa
+        this.updateMap(vehicles);
+        
+        // Czas
         this.updateTime();
     }
     
-    updateSimpleStats(vehicles) {
+    updateStats(vehicles) {
         const busCount = vehicles.filter(v => v.type === 'bus').length;
         const tramCount = vehicles.filter(v => v.type === 'tram').length;
-        const total = vehicles.length;
         
-        // Bezpieczna aktualizacja
-        const update = (id, value) => {
+        // Aktualizuj tylko jeśli elementy istnieją
+        const setText = (id, text) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = value;
+            if (el) el.textContent = text;
         };
         
-        update('bus-count', busCount);
-        update('tram-count', tramCount);
-        update('vehicles-online', total);
-        update('last-update', new Date().toLocaleTimeString('pl-PL'));
+        setText('bus-count', busCount);
+        setText('tram-count', tramCount);
+        setText('vehicles-online', vehicles.length);
+        setText('last-update', new Date().toLocaleTimeString('pl-PL'));
     }
     
-    updateSimpleMap(vehicles) {
+    updateMap(vehicles) {
         if (!this.map) return;
         
-        // Proste filtry
-        const showBuses = this.getChecked('show-buses', true);
-        const showTrams = this.getChecked('show-trams', true);
+        // Sprawdź filtry
+        const showBuses = this.isChecked('show-buses', true);
+        const showTrams = this.isChecked('show-trams', true);
         
+        // Filtruj pojazdy
         const filtered = vehicles.filter(v => {
             if (v.type === 'bus' && !showBuses) return false;
             if (v.type === 'tram' && !showTrams) return false;
             return true;
         });
         
-        // Dodaj markery
-        filtered.forEach(v => this.map.addVehicleMarker(v));
+        console.log(`🗺️ Wyświetlam ${filtered.length} pojazdów`);
+        
+        // Dodaj do mapy
+        filtered.forEach(v => {
+            this.map.addVehicleMarker(v);
+        });
         
         // Usuń stare
         const activeIds = filtered.map(v => v.id);
         this.map.removeOldVehicles(activeIds);
     }
     
-    getChecked(id, defaultValue) {
+    isChecked(id, defaultVal = true) {
         const el = document.getElementById(id);
-        return el && el.type === 'checkbox' ? el.checked : defaultValue;
+        if (!el || el.type !== 'checkbox') return defaultVal;
+        return el.checked;
     }
     
     applyFilters() {
         console.log('🔧 Zastosowano filtry');
-        if (this.vehicles.length > 0) {
-            this.updateSimpleMap(this.vehicles);
+        if (this.vehicles && this.vehicles.length > 0) {
+            this.updateMap(this.vehicles);
         }
     }
     
@@ -164,8 +178,8 @@ class TransportApp {
     }
 }
 
-// Uruchom po załadowaniu
-window.addEventListener('load', () => {
-    console.log('🌐 Strona załadowana');
+// URUCHOM APLIKACJĘ
+window.addEventListener('load', function() {
+    console.log('🌐 Strona załadowana - uruchamiam aplikację');
     window.app = new TransportApp();
 });
