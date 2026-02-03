@@ -5,21 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kraków Transport Live</title>
     
-    <!-- Leaflet CSS/JS -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/protobufjs@7.2.4/dist/protobuf.min.js"></script>
     
-    <!-- GTFS RT Parser -->
-    <script src="https://unpkg.com/gtfs-realtime-bindings@1.0.0/gtfs-realtime.js"></script>
-    
-    <!-- Stylizacje -->
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/themes.css">
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Ikony pojazdów -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.awesome-markers/dist/leaflet.awesome-markers.css">
-    <script src="https://unpkg.com/leaflet.awesome-markers/dist/leaflet.awesome-markers.min.js"></script>
+    <!-- Twoje style -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/themes.css">
+    
+    <style>
+        /* Tymczasowe style dla markerów */
+        .vehicle-marker {
+            background: none !important;
+            border: none !important;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -29,7 +31,7 @@
                 <h1><i class="fas fa-subway"></i> Kraków Transport Live</h1>
                 <div class="theme-switch-wrapper">
                     <label class="theme-switch" for="theme-checkbox">
-                        <input type="checkbox" id="theme-checkbox">
+                        <input type="checkbox" id="theme-checkbox" checked>
                         <div class="slider round">
                             <span class="sun">☀️</span>
                             <span class="moon">🌙</span>
@@ -59,11 +61,6 @@
                     <button id="refresh-btn" class="btn btn-primary">
                         <i class="fas fa-sync-alt"></i> Odśwież
                     </button>
-                    <div class="filter">
-                        <select id="line-filter" class="filter-select">
-                            <option value="all">Wszystkie linie</option>
-                        </select>
-                    </div>
                 </div>
             </div>
         </header>
@@ -91,7 +88,7 @@
                 <div class="sidebar-section">
                     <h3><i class="fas fa-info-circle"></i> Informacje</h3>
                     <div class="info-box">
-                        <p>Dane z: <strong>MPK Kraków GTFS-RT</strong></p>
+                        <p>Dane z: <strong>MPK Kraków</strong></p>
                         <p>Ostatnia aktualizacja: <span id="last-update">-</span></p>
                         <p>Pojazdy online: <span id="vehicles-online">0</span></p>
                     </div>
@@ -110,11 +107,6 @@
                             <span class="checkmark tram"></span>
                             Tramwaje
                         </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="show-stops">
-                            <span class="checkmark stop"></span>
-                            Przystanki
-                        </label>
                     </div>
                 </div>
                 
@@ -129,12 +121,13 @@
         
         <!-- Stopka -->
         <footer class="footer">
-            <p>Dane: <a href="https://gtfs.ztp.krakow.pl/" target="_blank">MPK Kraków GTFS</a> • 
+            <p>Dane: <a href="https://gtfs.ztp.krakow.pl/" target="_blank">MPK Kraków</a> • 
                Mapa: © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a></p>
         </footer>
     </div>
 
-    <!-- Skrypty aplikacji -->
+    <!-- Skrypty -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/theme.js"></script>
     <script src="js/map.js"></script>
     <script src="js/gtfs.js"></script>
