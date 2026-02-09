@@ -1,73 +1,17 @@
-/* Motyw jasny */
-[data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --bg-tertiary: #e0e0e0;
-    --text-primary: #212121;
-    --text-secondary: #666666;
-    --border-color: #dddddd;
-    --accent-color: #2196F3;
-    --card-bg: #ffffff;
-    --shadow: 0 2px 10px rgba(0,0,0,0.1);
+/* Color Variables for Light and Dark Theme */
+
+:root {
+    /* Light Theme Colors */
+    --background-color-light: #ffffff;  /* Light background color */
+    --text-color-light: #333333;        /* Dark text color for light theme */
+    --primary-color-light: #4CAF50;     /* Primary color for buttons and links */
+    --secondary-color-light: #f1f1f1;   /* Secondary background color */
 }
 
-/* Motyw ciemny */
-[data-theme="dark"] {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2d2d2d;
-    --bg-tertiary: #404040;
-    --text-primary: #f5f5f5;
-    --text-secondary: #b0b0b0;
-    --border-color: #404040;
-    --accent-color: #4fc3f7;
-    --card-bg: #2d2d2d;
-    --shadow: 0 2px 10px rgba(0,0,0,0.3);
-}
-
-/* Zastosowanie zmiennych */
-body {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.header, .footer {
-    background-color: var(--bg-secondary);
-    border-color: var(--border-color);
-    transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.sidebar {
-    background-color: var(--bg-secondary);
-    border-color: var(--border-color);
-}
-
-.btn-primary {
-    background-color: var(--accent-color);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent-color);
-    opacity: 0.9;
-}
-
-/* Map controls */
-.map-btn {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.map-btn:hover {
-    background-color: var(--bg-tertiary);
-}
-
-/* Checkboxes */
-.checkbox-label {
-    color: var(--text-primary);
-}
-
-/* Footer links */
-.footer a {
-    color: var(--accent-color);
+[data-theme='dark'] {
+    /* Dark Theme Colors */
+    --background-color-dark: #121212;   /* Dark background color */
+    --text-color-dark: #ffffff;         /* Light text color for dark theme */
+    --primary-color-dark: #BB86FC;      /* Primary color for buttons and links */
+    --secondary-color-dark: #3700B3;    /* Secondary background color */
 }
