@@ -1,117 +1,44 @@
 <!DOCTYPE html>
-<html lang="pl" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kraków Transport Live</title>
-    
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Nasze style -->
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/themes.css">
+    <title>Tysiąc Card Game</title>
+    <style>
+        body {font-family: Arial, sans-serif;}
+        .card {display: inline-block; margin: 10px; padding: 20px; border: 1px solid #ccc; border-radius: 5px;}
+        #game {text-align: center;}
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Nagłówek -->
-        <header class="header">
-            <div class="header-left">
-                <h1><i class="fas fa-bus"></i> Kraków Transport</h1>
-                <div class="theme-switch-wrapper">
-                    <label class="theme-switch" for="theme-checkbox">
-                        <input type="checkbox" id="theme-checkbox" checked>
-                        <div class="slider round">
-                            <span class="sun">☀️</span>
-                            <span class="moon">🌙</span>
-                        </div>
-                    </label>
-                    <span id="theme-label">Ciemny</span>
-                </div>
-            </div>
-            
-            <div class="header-right">
-                <div class="stats">
-                    <span class="stat-item">
-                        <i class="fas fa-bus" style="color:#2ecc71"></i>
-                        <span id="bus-count">0</span>
-                    </span>
-                    <span class="stat-item">
-                        <i class="fas fa-train" style="color:#e74c3c"></i>
-                        <span id="tram-count">0</span>
-                    </span>
-                    <span class="stat-item">
-                        <i class="fas fa-clock"></i>
-                        <span id="update-time">-:--</span>
-                    </span>
-                </div>
-                
-                <button id="refresh-btn" class="btn btn-primary">
-                    <i class="fas fa-sync-alt"></i> Odśwież
-                </button>
-            </div>
-        </header>
-
-        <!-- Główna zawartość -->
-        <main class="main-content">
-            <!-- Mapa -->
-            <div class="map-section">
-                <div id="map"></div>
-                <div class="map-controls">
-                    <button id="locate-btn" class="map-btn" title="Moja lokalizacja">
-                        <i class="fas fa-location-arrow"></i>
-                    </button>
-                    <button id="zoom-in" class="map-btn" title="Przybliż">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    <button id="zoom-out" class="map-btn" title="Oddal">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Panel boczny -->
-            <aside class="sidebar">
-                <div class="sidebar-section">
-                    <h3><i class="fas fa-info-circle"></i> Info</h3>
-                    <div class="info-box">
-                        <p>Pojazdy: <span id="vehicles-online">0</span></p>
-                        <p>Ostatnia aktualizacja: <br><span id="last-update">-</span></p>
-                    </div>
-                </div>
-                
-                <div class="sidebar-section">
-                    <h3><i class="fas fa-filter"></i> Filtry</h3>
-                    <div class="filters">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="show-buses" checked>
-                            <span class="checkmark bus"></span>
-                            Autobusy
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="show-trams" checked>
-                            <span class="checkmark tram"></span>
-                            Tramwaje
-                        </label>
-                    </div>
-                </div>
-            </aside>
-        </main>
-        
-        <!-- Stopka -->
-        <footer class="footer">
-            <p>Kraków Transport Live • Mock dane testowe</p>
-        </footer>
+    <div id="game">
+        <h1>Tysiąc Card Game</h1>
+        <div id="deck"></div>
+        <div id="players">
+            <div id="player1" class="card">Player 1: <span id="score1">0</span></div>
+            <div id="player2" class="card">Player 2: <span id="score2">0</span></div>
+        </div>
+        <button id="deal">Deal Cards</button>
+        <button id="play">Play Round</button>
     </div>
+    <script>
+        const deck = [...Array(24).keys()].map(i => `Card ${i + 1}`); // Sample cards
+        let player1Score = 0;
+        let player2Score = 0;
+        const deckElement = document.getElementById('deck');
 
-    <!-- Nasze skrypty -->
-    <script src="js/theme.js"></script>
-    <script src="js/map.js"></script>
-    <script src="js/gtfs.js"></script>
-    <script src="js/app.js"></script>
+        document.getElementById('deal').onclick = function() {
+            // Shuffle and deal logic here
+            deckElement.innerHTML = deck.join(', ');
+        };
+
+        document.getElementById('play').onclick = function() {
+            // Game logic here - point counting according to Tysiąc rules
+            player1Score += Math.floor(Math.random() * 10);
+            player2Score += Math.floor(Math.random() * 10);
+            document.getElementById('score1').innerText = player1Score;
+            document.getElementById('score2').innerText = player2Score;
+        };
+    </script>
 </body>
 </html>
